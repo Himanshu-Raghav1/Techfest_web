@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useRef, useState, useMemo, useEffect } from "react";
 import { useFrame } from "@react-three/fiber";
 import * as THREE from "three";
 
@@ -10,6 +10,7 @@ const HolographicShader = {
     uTime: { value: 0 },
     uColor: { value: new THREE.Color("#00A2FF") },
     uMouse: { value: new THREE.Vector2(0, 0) },
+    uTextTexture: { value: null as THREE.Texture | null },
   },
   vertexShader: `
     varying vec2 vUv;
@@ -28,6 +29,7 @@ const HolographicShader = {
     uniform vec3 uColor;
     uniform float uTime;
     uniform vec2 uMouse;
+    uniform sampler2D uTextTexture;
     varying vec2 vUv;
     varying vec3 vNormal;
     varying vec3 vViewPosition;
@@ -83,18 +85,131 @@ const HolographicShader = {
       float sweep = step(0.98, 1.0 - abs(sin(vUv.x - vUv.y + uTime * 0.7)));
       color += vec3(1.0) * sweep * 0.25;
 
+      // Sample and blend the dynamic text canvas overlay
+      vec4 textSample = texture2D(uTextTexture, vUv);
+      if (textSample.a > 0.05) {
+        color = mix(color, textSample.rgb, textSample.a);
+      }
+
       gl_FragColor = vec4(color, 0.92);
     }
   `,
 };
 
-export default function HolographicCard() {
+interface HolographicCardProps {
+  name?: string;
+  email?: string;
+  role?: string;
+  registered?: boolean;
+}
+
+export default function HolographicCard({ name = "", email = "", role = "Developer", registered = false }: HolographicCardProps) {
   const cardRef = useRef<THREE.Mesh>(null);
   const shaderRef = useRef<THREE.ShaderMaterial>(null);
   
   // Track target rotation based on cursor
   const [targetRot, setTargetRot] = useState({ x: 0, y: 0 });
   const [isHovered, setIsHovered] = useState(false);
+
+
+
+  // Instantiates a dynamic 2D canvas context for real-time ticket detail rendering
+  const canvasTexture = useMemo(() => {
+    if (typeof window === "undefined") return null;
+
+    const canvas = document.createElement("canvas");
+    canvas.width = 512;
+    canvas.height = 320;
+    const ctx = canvas.getContext("2d");
+    
+    const texture = new THREE.CanvasTexture(canvas);
+    texture.colorSpace = THREE.SRGBColorSpace;
+    texture.minFilter = THREE.LinearFilter;
+    texture.magFilter = THREE.LinearFilter;
+    
+    return { canvas, ctx, texture };
+  }, []);
+
+  // Live-draw details on canvas texture when registration values update
+  useEffect(() => {
+    if (!canvasTexture) return;
+    const { canvas, ctx, texture } = canvasTexture;
+    if (!ctx) return;
+
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    // Neon grid borders
+    ctx.strokeStyle = "rgba(0, 240, 255, 0.35)";
+    ctx.lineWidth = 4;
+    ctx.strokeRect(10, 10, canvas.width - 20, canvas.height - 20);
+
+    ctx.strokeStyle = "rgba(255, 0, 127, 0.15)";
+    ctx.lineWidth = 1;
+    for (let i = 25; i < canvas.height; i += 25) {
+      ctx.beginPath();
+      ctx.moveTo(10, i);
+      ctx.lineTo(canvas.width - 10, i);
+      ctx.stroke();
+    }
+
+    // Pass header
+    ctx.fillStyle = "#00F0FF";
+    ctx.font = "bold 20px monospace";
+    ctx.fillText("NEXUS TECHFEST 2026", 35, 48);
+
+    ctx.fillStyle = "rgba(255, 255, 255, 0.4)";
+    ctx.font = "bold 9px monospace";
+    ctx.fillText("SECURITY MODULE // ACCESS: GEN_TICKET_IRID", 35, 68);
+
+    // Thin accent separating line
+    ctx.fillStyle = "rgba(255, 255, 255, 0.1)";
+    ctx.fillRect(35, 85, canvas.width - 70, 2);
+
+    if (registered && name) {
+      // Operator Name
+      ctx.fillStyle = "#FFFFFF";
+      ctx.font = "bold 16px monospace";
+      ctx.fillText(`OPERATOR: ${name.toUpperCase()}`, 35, 125);
+
+      // Specialized division
+      ctx.fillStyle = "#FF007F";
+      ctx.font = "bold 12px monospace";
+      ctx.fillText(`DIVISION: ${role.toUpperCase()}`, 35, 160);
+
+      // Email ref
+      ctx.fillStyle = "rgba(255, 255, 255, 0.7)";
+      ctx.font = "11px monospace";
+      ctx.fillText(`COMMS REF: ${email}`, 35, 195);
+
+      // Unique token key
+      const sumCode = name.split("").reduce((acc, char) => acc + char.charCodeAt(0), 0);
+      const code = `NEX-${((sumCode * 4127) % 900000) + 100000}`;
+      ctx.fillStyle = "#00FF66";
+      ctx.font = "bold 13px monospace";
+      ctx.fillText(`TOKEN KEY: ${code}`, 35, 235);
+
+      // Holographic Verification badge
+      ctx.fillStyle = "rgba(0, 255, 102, 0.12)";
+      ctx.strokeStyle = "rgba(0, 255, 102, 0.4)";
+      ctx.lineWidth = 1;
+      ctx.fillRect(canvas.width - 125, 30, 85, 24);
+      ctx.strokeRect(canvas.width - 125, 30, 85, 24);
+
+      ctx.fillStyle = "#00FF66";
+      ctx.font = "bold 9px monospace";
+      ctx.fillText("VERIFIED", canvas.width - 110, 45);
+    } else {
+      // Placeholder data
+      ctx.fillStyle = "rgba(255, 255, 255, 0.25)";
+      ctx.font = "bold 15px monospace";
+      ctx.fillText("WAITING FOR DATA INPUT...", 35, 135);
+
+      ctx.font = "11px monospace";
+      ctx.fillText("COMPLETE REGISTRATION FORM TO INITIALIZE HOLO-CHIP", 35, 165);
+    }
+
+    texture.needsUpdate = true;
+  }, [name, email, role, registered, canvasTexture]);
 
   // Update uniform values & handle rotation lerp on every frame
   useFrame((state) => {
@@ -106,6 +221,9 @@ export default function HolographicCard() {
         new THREE.Vector2(targetRot.y * 2, targetRot.x * 2),
         0.05
       );
+      if (canvasTexture) {
+        shaderRef.current.uniforms.uTextTexture.value = canvasTexture.texture;
+      }
     }
 
     if (cardRef.current) {

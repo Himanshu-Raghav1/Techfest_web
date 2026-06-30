@@ -6,6 +6,10 @@ import * as THREE from "three";
 
 interface DebrisFieldProps {
   gravityOn: boolean;
+  scrollPercentRef: React.RefObject<number>;
+  scrollVelocityRef: React.RefObject<number>;
+  coreSpeed?: number;
+  coreEntropy?: number;
 }
 
 interface Particle {
@@ -18,12 +22,19 @@ interface Particle {
   geometryType: "box" | "cone" | "torus" | "sphere";
   color: string;
   seed: number;
+  phaseOffset: number; // for helical alignment
 }
 
 const PARTICLE_COUNT = 45;
-const GDG_COLORS = ["#FF003C", "#00A2FF", "#FFE600", "#00FF66"];
+const BRAND_COLORS = ["#00F0FF", "#FF007F", "#00FF66"];
 
-export default function DebrisField({ gravityOn }: DebrisFieldProps) {
+export default function DebrisField({
+  gravityOn,
+  scrollPercentRef,
+  scrollVelocityRef,
+  coreSpeed = 1.0,
+  coreEntropy = 1.0,
+}: DebrisFieldProps) {
   const meshRefs = useRef<(THREE.Mesh | null)[]>([]);
 
   // Initialize particles once
@@ -31,31 +42,33 @@ export default function DebrisField({ gravityOn }: DebrisFieldProps) {
     const list: Particle[] = [];
     for (let i = 0; i < PARTICLE_COUNT; i++) {
       const seed = Math.random();
+      const phaseOffset = seed * Math.PI * 2;
       
-      // Orderly baseline position: arranged in a flat ring beneath the logo
-      const angle = (i / PARTICLE_COUNT) * Math.PI * 2;
-      const radius = 1.3 + Math.random() * 0.8;
+      // Orderly baseline position: arranged in a vertical cylindrical helix shell around the core
+      const angle = (i / PARTICLE_COUNT) * Math.PI * 6 + phaseOffset; // Multi-turn helix
+      const radius = 1.4 + Math.random() * 0.7;
       const bx = Math.cos(angle) * radius;
-      const by = -1.8 + (Math.random() - 0.5) * 0.2; // orderly baseline Y
+      // Helix height spans from -2.2 to +2.2
+      const by = -2.2 + (i / PARTICLE_COUNT) * 4.4 + (Math.random() - 0.5) * 0.3;
       const bz = Math.sin(angle) * radius;
       const basePos = new THREE.Vector3(bx, by, bz);
 
-      // Scattered position: random position spread out in space
+      // Scattered position: wider random space
       const sx = (Math.random() - 0.5) * 6;
-      const sy = 0.5 + Math.random() * 3.5; // scatter upwards
+      const sy = 0.5 + Math.random() * 4.5;
       const sz = (Math.random() - 0.5) * 6;
       const scatterPos = new THREE.Vector3(sx, sy, sz);
 
       // Drift velocity in zero gravity
       const vx = (Math.random() - 0.5) * 0.15;
-      const vy = 0.1 + Math.random() * 0.25; // drift upwards
+      const vy = 0.15 + Math.random() * 0.3; // upward drift
       const vz = (Math.random() - 0.5) * 0.15;
       const velocity = new THREE.Vector3(vx, vy, vz);
 
       // Drift rotation velocity
-      const rx = (Math.random() - 0.5) * 1.5;
-      const ry = (Math.random() - 0.5) * 1.5;
-      const rz = (Math.random() - 0.5) * 1.5;
+      const rx = (Math.random() - 0.5) * 2;
+      const ry = (Math.random() - 0.5) * 2;
+      const rz = (Math.random() - 0.5) * 2;
       const rotVelocity = new THREE.Vector3(rx, ry, rz);
 
       // Random geometry and scale
@@ -65,8 +78,8 @@ export default function DebrisField({ gravityOn }: DebrisFieldProps) {
       else if (rGeom < 0.5) geometryType = "torus";
       else if (rGeom < 0.75) geometryType = "sphere";
 
-      const scale = 0.08 + Math.random() * 0.12;
-      const color = GDG_COLORS[Math.floor(Math.random() * GDG_COLORS.length)];
+      const scale = 0.05 + Math.random() * 0.09;
+      const color = BRAND_COLORS[Math.floor(Math.random() * BRAND_COLORS.length)];
 
       list.push({
         id: i,
@@ -78,53 +91,65 @@ export default function DebrisField({ gravityOn }: DebrisFieldProps) {
         geometryType,
         color,
         seed,
+        phaseOffset,
       });
     }
     return list;
   }, []);
 
   useFrame((state, delta) => {
-    // Clamp delta to prevent massive jumps on tab refocus
     const dt = Math.min(delta, 0.1);
     const t = state.clock.getElapsedTime();
+
+    const scrollPercent = scrollPercentRef.current;
+    const scrollVelocity = scrollVelocityRef.current;
+
+    // Scroll speed velocity increases the flow/drift rate (scaled by coreSpeed)
+    const scrollFlowMultiplier = (1.0 + scrollVelocity * 10.0) * coreSpeed;
 
     particles.forEach((p, idx) => {
       const mesh = meshRefs.current[idx];
       if (!mesh) return;
 
       if (gravityOn) {
-        // Gravity ON: Lerp particles back to their orderly baseline positions
-        // Add a gentle floating wave to each particle so it doesn't look completely frozen
-        const floatOffset = Math.sin(t * 1.5 + p.seed * 10) * 0.04;
-        const targetPos = p.basePos.clone();
-        targetPos.y += floatOffset;
-
-        mesh.position.lerp(targetPos, 0.08); // smooth return
+        // Gravity ON: Helical alignment
+        // The cylinder baseline translates and rotates slightly based on page scroll progression!
+        const scrollAngleOffset = scrollPercent * Math.PI * 1.5;
+        const currentAngle = (idx / PARTICLE_COUNT) * Math.PI * 6 + p.phaseOffset + scrollAngleOffset;
         
-        // Reset rotation back to a relaxed base state
-        const targetRot = new THREE.Euler(0, t * 0.2 + p.seed * 5, 0);
+        // Recompute position to wrap around scroll movement
+        const radius = 1.4 + Math.sin(t * 0.5 + p.seed * 5) * 0.1;
+        const targetX = Math.cos(currentAngle) * radius;
+        // Height shifts upward as we scroll, creating a camera travel flow
+        const targetY = p.basePos.y + scrollPercent * 2.0 + Math.sin(t * 1.2 + p.seed * 10) * 0.05;
+        const targetZ = Math.sin(currentAngle) * radius;
+        const targetPos = new THREE.Vector3(targetX, targetY, targetZ);
+
+        mesh.position.lerp(targetPos, 0.08); // smooth transition
+
+        // Rotate in sync with cylindrical shell rotation
+        const targetRot = new THREE.Euler(0, t * 0.3 + p.seed * 5, 0);
         const currentQuaternion = mesh.quaternion;
         const targetQuaternion = new THREE.Quaternion().setFromEuler(targetRot);
         currentQuaternion.slerp(targetQuaternion, 0.08);
       } else {
-        // Gravity OFF: Drift particles upwards and outwards
-        // Update the scatter target position slowly based on its drift velocity
-        p.scatterPos.addScaledVector(p.velocity, dt);
+        // Gravity OFF: Drift upwards rapidly if scrolling
+        const activeDriftVelocity = p.velocity.clone().multiplyScalar(scrollFlowMultiplier);
+        p.scatterPos.addScaledVector(activeDriftVelocity, dt);
 
-        // If particle drifts too high, wrap it back down
-        if (p.scatterPos.y > 4.5) {
-          p.scatterPos.y = -1.2;
+        // Particle height boundary wraps around
+        if (p.scatterPos.y > 5.0) {
+          p.scatterPos.y = -2.0;
           p.scatterPos.x = (Math.random() - 0.5) * 5;
           p.scatterPos.z = (Math.random() - 0.5) * 5;
         }
 
-        // Lerp mesh position to the active drifting scatterPos
-        mesh.position.lerp(p.scatterPos, 0.05);
+        mesh.position.lerp(p.scatterPos, 0.06);
 
-        // Apply constant spin
-        mesh.rotation.x += p.rotVelocity.x * dt * 0.5;
-        mesh.rotation.y += p.rotVelocity.y * dt * 0.5;
-        mesh.rotation.z += p.rotVelocity.z * dt * 0.5;
+        // Rotation spin matches scroll velocity
+        mesh.rotation.x += p.rotVelocity.x * dt * 0.5 * scrollFlowMultiplier;
+        mesh.rotation.y += p.rotVelocity.y * dt * 0.5 * scrollFlowMultiplier;
+        mesh.rotation.z += p.rotVelocity.z * dt * 0.5 * scrollFlowMultiplier;
       }
     });
   });
@@ -138,7 +163,7 @@ export default function DebrisField({ gravityOn }: DebrisFieldProps) {
             ref={(el) => {
               meshRefs.current[idx] = el;
             }}
-            scale={[p.scale, p.scale, p.scale]}
+            scale={[p.scale * coreEntropy, p.scale * coreEntropy, p.scale * coreEntropy]}
             castShadow
             receiveShadow
           >
@@ -154,7 +179,7 @@ export default function DebrisField({ gravityOn }: DebrisFieldProps) {
               clearcoat={1.0}
               clearcoatRoughness={0.1}
               emissive={p.color}
-              emissiveIntensity={0.6}
+              emissiveIntensity={0.8}
             />
           </mesh>
         );

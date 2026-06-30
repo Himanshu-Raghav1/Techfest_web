@@ -3,7 +3,14 @@
 import { Canvas } from "@react-three/fiber";
 import HolographicCard from "./HolographicCard";
 
-export default function HolographicPassCanvas() {
+interface HolographicPassCanvasProps {
+  name: string;
+  email: string;
+  role: string;
+  registered: boolean;
+}
+
+export default function HolographicPassCanvas({ name, email, role, registered }: HolographicPassCanvasProps) {
   return (
     <div className="w-full h-[400px] flex items-center justify-center relative cursor-grab active:cursor-grabbing">
       <Canvas
@@ -26,7 +33,7 @@ export default function HolographicPassCanvas() {
         <pointLight position={[-3, 2, 1]} intensity={1.5} color="#FF003C" />
         <pointLight position={[3, -2, 1]} intensity={1.5} color="#00A2FF" />
 
-        <HolographicCard />
+        <HolographicCard name={name} email={email} role={role} registered={registered} />
       </Canvas>
     </div>
   );

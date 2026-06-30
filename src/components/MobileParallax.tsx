@@ -27,7 +27,7 @@ export default function MobileParallax() {
         });
       }
 
-      // 2. Text Content drifts slightly upward/downward to create separation
+      // 2. Text Content drifts slightly
       if (contentRef.current) {
         gsap.to(contentRef.current, {
           y: scrollY * -0.06,
@@ -93,31 +93,31 @@ export default function MobileParallax() {
         className="absolute inset-0 w-full h-[120%] cyber-grid opacity-20 pointer-events-none"
       />
 
-      {/* Blob 1: Neon Blue glow */}
+      {/* Blob 1: Neon Cyan glow */}
       <div
         ref={blob1Ref}
-        className="absolute top-1/4 left-[-10%] w-[60vw] h-[60vw] rounded-full bg-gdg-blue/15 blur-[80px]"
+        className="absolute top-1/4 left-[-10%] w-[60vw] h-[60vw] rounded-full bg-brand-cyan/15 blur-[80px]"
       />
 
-      {/* Blob 2: Neon Red glow */}
+      {/* Blob 2: Neon Magenta glow */}
       <div
         ref={blob2Ref}
-        className="absolute top-1/2 right-[-20%] w-[70vw] h-[70vw] rounded-full bg-gdg-red/10 blur-[100px]"
+        className="absolute top-1/2 right-[-20%] w-[70vw] h-[70vw] rounded-full bg-brand-magenta/10 blur-[100px]"
       />
 
       {/* Floating 2D Tech elements (Layered cards mimicking 3D depth) */}
       <div
         ref={shape1Ref}
-        className="absolute top-[18%] right-[8%] w-16 h-16 rounded-xl border border-gdg-blue/30 bg-cyber-dark/40 backdrop-blur-md flex items-center justify-center shadow-[0_0_15px_rgba(0,162,255,0.15)] pointer-events-none"
+        className="absolute top-[18%] right-[8%] w-16 h-16 rounded-xl border border-brand-cyan/30 bg-cyber-dark/40 backdrop-blur-md hidden md:flex items-center justify-center shadow-[0_0_15px_rgba(0,240,255,0.15)] pointer-events-none"
       >
-        <span className="text-gdg-blue font-mono text-xs font-semibold">⚡ CLOUD</span>
+        <span className="text-brand-cyan font-mono text-xs font-semibold">⚡ CLOUD</span>
       </div>
 
       <div
         ref={shape2Ref}
-        className="absolute top-[48%] left-[10%] w-20 h-20 rounded-xl border border-gdg-green/30 bg-cyber-dark/40 backdrop-blur-md flex items-center justify-center shadow-[0_0_15px_rgba(0,255,102,0.15)] pointer-events-none"
+        className="absolute top-[48%] right-[24%] w-20 h-20 rounded-xl border border-brand-green/30 bg-cyber-dark/40 backdrop-blur-md hidden md:flex items-center justify-center shadow-[0_0_15px_rgba(0,255,102,0.15)] pointer-events-none"
       >
-        <span className="text-gdg-green font-mono text-xs font-semibold">🤖 AI/ML</span>
+        <span className="text-brand-green font-mono text-xs font-semibold">🤖 AI/ML</span>
       </div>
     </div>
   );

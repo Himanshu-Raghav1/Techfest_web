@@ -6,101 +6,154 @@ import * as THREE from "three";
 
 interface TechLogoProps {
   gravityOn: boolean;
+  scrollPercentRef: React.RefObject<number>;
+  scrollVelocityRef: React.RefObject<number>;
+  coreSpeed?: number;
+  coreHeat?: string;
+  coreEntropy?: number;
 }
 
-export default function TechLogo({ gravityOn }: TechLogoProps) {
+export default function TechLogo({
+  gravityOn,
+  scrollPercentRef,
+  scrollVelocityRef,
+  coreSpeed = 1.0,
+  coreHeat = "#FF007F",
+  coreEntropy = 1.0,
+}: TechLogoProps) {
   const logoGroupRef = useRef<THREE.Group>(null);
   
-  // Refs for orbiting rings to rotate them independently
-  const redRingRef = useRef<THREE.Mesh>(null);
-  const blueRingRef = useRef<THREE.Mesh>(null);
-  const yellowRingRef = useRef<THREE.Mesh>(null);
-  const greenRingRef = useRef<THREE.Mesh>(null);
-  const coreRef = useRef<THREE.Mesh>(null);
+  // Refs for rotating parts of the Nexus Core
+  const innerCoreRef = useRef<THREE.Mesh>(null);
+  const ringCyanRef = useRef<THREE.Mesh>(null);
+  const ringMagentaRef = useRef<THREE.Mesh>(null);
+  const ringGreenRef = useRef<THREE.Mesh>(null);
+  const cageRef = useRef<THREE.Mesh>(null);
+  const pointsRef = useRef<THREE.Points>(null);
 
-  // Memoize positions for points to prevent creation on every frame
+  // Memoize positions for the core particle cloud
   const positions = useMemo(() => {
     return new Float32Array(
-      Array.from({ length: 90 }, () => (Math.random() - 0.5) * 1.5)
+      Array.from({ length: 150 }, () => (Math.random() - 0.5) * 1.6)
     );
   }, []);
 
-  useFrame((state) => {
+  useFrame((state, delta) => {
     const t = state.clock.getElapsedTime();
+    const dt = Math.min(delta, 0.1);
 
-    // 1. Gentle floating animation (sine wave) for the entire group (only when gravity is ON)
+    const scrollPercent = scrollPercentRef.current;
+    const scrollVelocity = scrollVelocityRef.current;
+
+    // Direct multiplier based on scroll velocity + control speed scaling
+    const speedFactor = coreSpeed;
+    const spinBoost = scrollVelocity * 15.0 * speedFactor;
+    const brightnessBoost = Math.min(scrollVelocity * 4.0, 2.5);
+
+    // 1. Core group rotation and position
     if (logoGroupRef.current) {
       if (gravityOn) {
-        // Slow float and slow overall rotation
-        logoGroupRef.current.position.y = Math.sin(t * 1.5) * 0.2;
-        logoGroupRef.current.rotation.y = t * 0.15;
-        logoGroupRef.current.rotation.z = Math.sin(t * 0.5) * 0.05;
+        // Slow breathing float + scroll-linked tilt
+        logoGroupRef.current.position.y = Math.sin(t * 1.5 * speedFactor) * 0.15;
+        // Direct scroll position maps to rotation
+        logoGroupRef.current.rotation.y = t * 0.1 * speedFactor + scrollPercent * Math.PI * 1.5;
+        logoGroupRef.current.rotation.z = Math.sin(t * 0.5 * speedFactor) * 0.05 + scrollPercent * 0.2;
       } else {
-        // In zero-gravity, drift very slightly more erratically
-        logoGroupRef.current.position.y = Math.sin(t * 0.8) * 0.3 + 0.1;
-        logoGroupRef.current.rotation.y = t * 0.25;
-        logoGroupRef.current.rotation.x = Math.cos(t * 0.4) * 0.1;
+        // Zero-gravity drifting
+        logoGroupRef.current.position.y = Math.sin(t * 0.8 * speedFactor) * 0.25 + 0.1;
+        logoGroupRef.current.rotation.y = t * 0.2 * speedFactor + scrollPercent * Math.PI * 1.5;
+        logoGroupRef.current.rotation.x = Math.cos(t * 0.4 * speedFactor) * 0.1 + spinBoost * 0.1;
       }
     }
 
-    // 2. Orbiting ring animations (always rotating to feel alive)
-    if (redRingRef.current) {
-      redRingRef.current.rotation.x = t * 0.8;
-      redRingRef.current.rotation.y = t * 0.3;
-    }
-    if (blueRingRef.current) {
-      blueRingRef.current.rotation.y = -t * 0.6;
-      blueRingRef.current.rotation.z = t * 0.4;
-    }
-    if (yellowRingRef.current) {
-      yellowRingRef.current.rotation.x = -t * 0.5;
-      yellowRingRef.current.rotation.z = -t * 0.7;
-    }
-    if (greenRingRef.current) {
-      greenRingRef.current.rotation.y = t * 0.5;
-      greenRingRef.current.rotation.x = t * 0.5;
+    // 2. Animate inner energy core pulsation and color morphing
+    if (innerCoreRef.current) {
+      const pulseRate = (4.0 + scrollVelocity * 20.0) * speedFactor;
+      const pulseScale = 1.0 + Math.sin(t * pulseRate) * (0.06 + scrollVelocity * 0.1);
+      innerCoreRef.current.scale.set(pulseScale, pulseScale, pulseScale);
+      
+      const mat = innerCoreRef.current.material as THREE.MeshStandardMaterial;
+      if (mat) {
+        mat.emissiveIntensity = 2.0 + brightnessBoost;
+        // Lerp color waves smoothly
+        mat.color.lerp(new THREE.Color(coreHeat), 0.08);
+        mat.emissive.lerp(new THREE.Color(coreHeat), 0.08);
+      }
     }
 
-    // Pulsate the central GDG energy core
-    if (coreRef.current) {
-      const scale = 1 + Math.sin(t * 4) * 0.08;
-      coreRef.current.scale.set(scale, scale, scale);
+    // 3. Spinning outer structural cage
+    if (cageRef.current) {
+      cageRef.current.rotation.y = -t * 0.15 * speedFactor - spinBoost * 0.3;
+      cageRef.current.rotation.x = t * 0.05 * speedFactor + spinBoost * 0.1;
+    }
+
+    // 4. Orbiting energy rings (Cyan, Magenta, Green)
+    if (ringCyanRef.current) {
+      ringCyanRef.current.rotation.x = t * 0.8 * speedFactor + spinBoost * 1.2;
+      ringCyanRef.current.rotation.y = t * 0.3 * speedFactor + scrollPercent * 2;
+      const mat = ringCyanRef.current.material as THREE.MeshStandardMaterial;
+      if (mat) mat.emissiveIntensity = 2.5 + brightnessBoost;
+    }
+    if (ringMagentaRef.current) {
+      ringMagentaRef.current.rotation.y = -t * 0.6 * speedFactor - spinBoost * 1.0;
+      ringMagentaRef.current.rotation.z = t * 0.4 * speedFactor + scrollPercent * 1.5;
+      const mat = ringMagentaRef.current.material as THREE.MeshStandardMaterial;
+      if (mat) {
+        mat.emissiveIntensity = 2.5 + brightnessBoost;
+        // Lerp the customizable temperature color band
+        mat.color.lerp(new THREE.Color(coreHeat), 0.08);
+        mat.emissive.lerp(new THREE.Color(coreHeat), 0.08);
+      }
+    }
+    if (ringGreenRef.current) {
+      ringGreenRef.current.rotation.z = t * 0.5 * speedFactor + spinBoost * 0.8;
+      ringGreenRef.current.rotation.x = -t * 0.4 * speedFactor + scrollPercent * 2.5;
+      const mat = ringGreenRef.current.material as THREE.MeshStandardMaterial;
+      if (mat) mat.emissiveIntensity = 2.0 + brightnessBoost * 0.5;
+    }
+
+    // 5. Dynamic particle size scaling based on entropy prop
+    if (pointsRef.current) {
+      const mat = pointsRef.current.material as THREE.PointsMaterial;
+      if (mat) {
+        mat.size = THREE.MathUtils.lerp(mat.size, 0.045 * coreEntropy, 0.08);
+      }
     }
   });
 
   return (
     <group ref={logoGroupRef}>
-      {/* Central Core Sphere */}
-      <mesh ref={coreRef} castShadow receiveShadow>
-        <sphereGeometry args={[0.45, 32, 32]} />
+      {/* Central Pulsating Energy Sphere */}
+      <mesh ref={innerCoreRef} castShadow receiveShadow>
+        <sphereGeometry args={[0.42, 32, 32]} />
         <meshStandardMaterial
-          color="#ffffff"
-          emissive="#ffffff"
-          emissiveIntensity={1.2}
+          color="#FF007F"
+          emissive="#FF007F"
+          emissiveIntensity={2.0}
           roughness={0.1}
-          metalness={0.9}
+          metalness={0.8}
         />
       </mesh>
-
-      {/* Main Stylized Chrome Frame (Outer Sphere/Cage) */}
-      <mesh castShadow receiveShadow>
-        <octahedronGeometry args={[1.2, 2]} />
+ 
+      {/* Futuristic Structural Cage: Chrome wireframe sphere */}
+      <mesh ref={cageRef} castShadow receiveShadow>
+        <sphereGeometry args={[1.1, 12, 12]} />
         <meshPhysicalMaterial
-          color="#0f0f15"
+          color="#0d0d12"
           metalness={1.0}
-          roughness={0.08}
+          roughness={0.05}
           clearcoat={1.0}
-          clearcoatRoughness={0.08}
+          clearcoatRoughness={0.05}
           reflectivity={1.0}
           wireframe={true}
         />
       </mesh>
-
-      {/* Second Chrome Structure (Interlocking Torus) */}
+ 
+      {/* Interlocking Solid Metallic Torus */}
       <mesh castShadow receiveShadow rotation={[Math.PI / 4, Math.PI / 4, 0]}>
-        <torusGeometry args={[0.9, 0.08, 16, 100]} />
+        <torusGeometry args={[0.85, 0.06, 16, 80]} />
         <meshPhysicalMaterial
-          color="#1b1b22"
+          color="#161622"
           metalness={1.0}
           roughness={0.1}
           clearcoat={1.0}
@@ -108,53 +161,42 @@ export default function TechLogo({ gravityOn }: TechLogoProps) {
           reflectivity={1.0}
         />
       </mesh>
-
-      {/* Orbiting Neon Ring 1: GDG Red */}
-      <mesh ref={redRingRef} castShadow>
-        <torusGeometry args={[1.4, 0.02, 8, 64]} />
+ 
+      {/* Orbiting Energy Ring 1: Electric Cyan */}
+      <mesh ref={ringCyanRef} castShadow>
+        <torusGeometry args={[1.35, 0.018, 8, 64]} />
         <meshStandardMaterial
-          color="#FF003C"
-          emissive="#FF003C"
+          color="#00F0FF"
+          emissive="#00F0FF"
           emissiveIntensity={2.5}
           toneMapped={false}
         />
       </mesh>
-
-      {/* Orbiting Neon Ring 2: GDG Blue */}
-      <mesh ref={blueRingRef} castShadow rotation={[Math.PI / 3, 0, 0]}>
-        <torusGeometry args={[1.6, 0.02, 8, 64]} />
+ 
+      {/* Orbiting Energy Ring 2: Cyber Magenta */}
+      <mesh ref={ringMagentaRef} castShadow rotation={[Math.PI / 3, 0, 0]}>
+        <torusGeometry args={[1.55, 0.018, 8, 64]} />
         <meshStandardMaterial
-          color="#00A2FF"
-          emissive="#00A2FF"
+          color="#FF007F"
+          emissive="#FF007F"
           emissiveIntensity={2.5}
           toneMapped={false}
         />
       </mesh>
-
-      {/* Orbiting Neon Ring 3: GDG Yellow */}
-      <mesh ref={yellowRingRef} castShadow rotation={[0, Math.PI / 3, 0]}>
-        <torusGeometry args={[1.8, 0.02, 8, 64]} />
-        <meshStandardMaterial
-          color="#FFE600"
-          emissive="#FFE600"
-          emissiveIntensity={2.5}
-          toneMapped={false}
-        />
-      </mesh>
-
-      {/* Orbiting Neon Ring 4: GDG Green */}
-      <mesh ref={greenRingRef} castShadow rotation={[Math.PI / 4, Math.PI / 4, 0]}>
-        <torusGeometry args={[2.0, 0.02, 8, 64]} />
+ 
+      {/* Orbiting Energy Ring 3: Bio Green */}
+      <mesh ref={ringGreenRef} castShadow rotation={[0, Math.PI / 3, 0]}>
+        <torusGeometry args={[1.75, 0.018, 8, 64]} />
         <meshStandardMaterial
           color="#00FF66"
           emissive="#00FF66"
-          emissiveIntensity={2.5}
+          emissiveIntensity={2.0}
           toneMapped={false}
         />
       </mesh>
-
-      {/* Inner glowing particle cloud for premium cyber feel */}
-      <points>
+ 
+      {/* Core Plasma Particle Cloud */}
+      <points ref={pointsRef}>
         <bufferGeometry>
           <bufferAttribute
             attach="attributes-position"
@@ -162,8 +204,8 @@ export default function TechLogo({ gravityOn }: TechLogoProps) {
           />
         </bufferGeometry>
         <pointsMaterial
-          color="#00A2FF"
-          size={0.06}
+          color="#00F0FF"
+          size={0.045}
           sizeAttenuation={true}
           transparent={true}
           opacity={0.8}

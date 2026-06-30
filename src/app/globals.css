@@ -1,20 +1,20 @@
+@import url("https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;700;900&family=Inter:wght@300;400;500;600;700;800&display=swap");
 @import "tailwindcss";
 
 @theme {
-  --color-gdg-red: #FF003C;
-  --color-gdg-blue: #00A2FF;
-  --color-gdg-yellow: #FFE600;
-  --color-gdg-green: #00FF66;
-  --color-cyber-dark: #050508;
-  --color-cyber-darker: #020203;
-  --color-cyber-gray: #121217;
+  --color-brand-cyan: #00F0FF;
+  --color-brand-magenta: #FF007F;
+  --color-brand-green: #00FF66;
+  --color-cyber-dark: #05050A;
+  --color-cyber-darker: #020204;
+  --color-cyber-gray: #12121B;
   
-  --font-orbitron: var(--font-orbitron);
-  --font-sans: var(--font-inter);
+  --font-orbitron: "Orbitron", monospace;
+  --font-sans: "Inter", sans-serif;
 }
 
 :root {
-  --background: #020203;
+  --background: #020204;
   --foreground: #ededed;
 }
 
@@ -50,25 +50,21 @@ html.lenis body {
 .cyber-grid {
   background-size: 50px 50px;
   background-image: 
-    linear-gradient(to right, rgba(255, 255, 255, 0.02) 1px, transparent 1px),
-    linear-gradient(to bottom, rgba(255, 255, 255, 0.02) 1px, transparent 1px);
+    linear-gradient(to right, rgba(0, 240, 255, 0.015) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(0, 240, 255, 0.015) 1px, transparent 1px);
 }
 
 .cyber-grid-dots {
   background-size: 30px 30px;
-  background-image: radial-gradient(rgba(255, 255, 255, 0.05) 1px, transparent 1px);
+  background-image: radial-gradient(rgba(255, 0, 127, 0.04) 1px, transparent 1px);
 }
 
-.glow-red {
-  text-shadow: 0 0 10px rgba(255, 0, 60, 0.6), 0 0 20px rgba(255, 0, 60, 0.3);
+.glow-cyan {
+  text-shadow: 0 0 10px rgba(0, 240, 255, 0.6), 0 0 20px rgba(0, 240, 255, 0.3);
 }
 
-.glow-blue {
-  text-shadow: 0 0 10px rgba(0, 162, 255, 0.6), 0 0 20px rgba(0, 162, 255, 0.3);
-}
-
-.glow-yellow {
-  text-shadow: 0 0 10px rgba(255, 230, 0, 0.6), 0 0 20px rgba(255, 230, 0, 0.3);
+.glow-magenta {
+  text-shadow: 0 0 10px rgba(255, 0, 127, 0.6), 0 0 20px rgba(255, 0, 127, 0.3);
 }
 
 .glow-green {
@@ -80,26 +76,25 @@ html.lenis body {
   width: 8px;
 }
 ::-webkit-scrollbar-track {
-  background: #020203;
+  background: #020204;
 }
 ::-webkit-scrollbar-thumb {
-  background: #121217;
+  background: #12121B;
   border: 1px solid rgba(255, 255, 255, 0.05);
   border-radius: 4px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: #1d1d26;
-  border-color: rgba(0, 162, 255, 0.2);
+  background: #1f1f2d;
+  border-color: rgba(0, 240, 255, 0.2);
 }
 
 /* Dynamic neon border line animations */
 @keyframes border-glow-flow {
-  0%, 100% { border-color: rgba(255, 0, 60, 0.4); }
-  25% { border-color: rgba(0, 162, 255, 0.4); }
-  50% { border-color: rgba(255, 230, 0, 0.4); }
-  75% { border-color: rgba(0, 255, 102, 0.4); }
+  0%, 100% { border-color: rgba(0, 240, 255, 0.3); }
+  33% { border-color: rgba(255, 0, 127, 0.3); }
+  66% { border-color: rgba(0, 255, 102, 0.3); }
 }
 
 .animate-border-glow {
-  animation: border-glow-flow 8s linear infinite;
+  animation: border-glow-flow 6s linear infinite;
 }
