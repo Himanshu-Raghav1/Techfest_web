@@ -1,0 +1,105 @@
+@import "tailwindcss";
+
+@theme {
+  --color-gdg-red: #FF003C;
+  --color-gdg-blue: #00A2FF;
+  --color-gdg-yellow: #FFE600;
+  --color-gdg-green: #00FF66;
+  --color-cyber-dark: #050508;
+  --color-cyber-darker: #020203;
+  --color-cyber-gray: #121217;
+  
+  --font-orbitron: var(--font-orbitron);
+  --font-sans: var(--font-inter);
+}
+
+:root {
+  --background: #020203;
+  --foreground: #ededed;
+}
+
+body {
+  background-color: var(--background);
+  color: var(--foreground);
+  overflow-x: hidden;
+}
+
+/* Lenis Smooth Scroll Configuration */
+html.lenis,
+html.lenis body {
+  height: auto;
+}
+
+.lenis-smooth {
+  scroll-behavior: auto !important;
+}
+
+.lenis-smooth [data-lenis-prevent] {
+  overscroll-behavior: contain;
+}
+
+.lenis-stopped {
+  overflow: hidden;
+}
+
+.lenis-scrolling iframe {
+  pointer-events: none;
+}
+
+/* Custom Cyber Design Utilities */
+.cyber-grid {
+  background-size: 50px 50px;
+  background-image: 
+    linear-gradient(to right, rgba(255, 255, 255, 0.02) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(255, 255, 255, 0.02) 1px, transparent 1px);
+}
+
+.cyber-grid-dots {
+  background-size: 30px 30px;
+  background-image: radial-gradient(rgba(255, 255, 255, 0.05) 1px, transparent 1px);
+}
+
+.glow-red {
+  text-shadow: 0 0 10px rgba(255, 0, 60, 0.6), 0 0 20px rgba(255, 0, 60, 0.3);
+}
+
+.glow-blue {
+  text-shadow: 0 0 10px rgba(0, 162, 255, 0.6), 0 0 20px rgba(0, 162, 255, 0.3);
+}
+
+.glow-yellow {
+  text-shadow: 0 0 10px rgba(255, 230, 0, 0.6), 0 0 20px rgba(255, 230, 0, 0.3);
+}
+
+.glow-green {
+  text-shadow: 0 0 10px rgba(0, 255, 102, 0.6), 0 0 20px rgba(0, 255, 102, 0.3);
+}
+
+/* Scrollbar Customization */
+::-webkit-scrollbar {
+  width: 8px;
+}
+::-webkit-scrollbar-track {
+  background: #020203;
+}
+::-webkit-scrollbar-thumb {
+  background: #121217;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #1d1d26;
+  border-color: rgba(0, 162, 255, 0.2);
+}
+
+/* Dynamic neon border line animations */
+@keyframes border-glow-flow {
+  0%, 100% { border-color: rgba(255, 0, 60, 0.4); }
+  25% { border-color: rgba(0, 162, 255, 0.4); }
+  50% { border-color: rgba(255, 230, 0, 0.4); }
+  75% { border-color: rgba(0, 255, 102, 0.4); }
+}
+
+.animate-border-glow {
+  animation: border-glow-flow 8s linear infinite;
+}
